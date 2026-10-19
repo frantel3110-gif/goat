@@ -15,7 +15,7 @@ local bootOK, bootError = xpcall(function()
     if type(env.LiftingHub) == "table" and type(env.LiftingHub.stop) == "function" then
         pcall(env.LiftingHub.stop)
     end
-    _G.AutoLiftToken = nil
+    pcall(function() _G.AutoLiftToken = nil end)
     for _, name in ipairs({"LiftingHubFixed", "WeightLiftTestMenu"}) do
         local old = parent:FindFirstChild(name)
         if old then old:Destroy() end
@@ -39,6 +39,15 @@ local bootOK, bootError = xpcall(function()
     end
     gui = make("ScreenGui", {Name = "LiftingHubFixed", ResetOnSpawn = false,
         DisplayOrder = 100000, IgnoreGuiInset = true}, parent)
+    -- Prefer an executor-provided UI container when available; keep PlayerGui as the fallback.
+    if type(gethui) == "function" then pcall(function()
+        local container = gethui()
+        if typeof(container) == "Instance" then
+            local previous = container:FindFirstChild("LiftingHubFixed")
+            if previous and previous ~= gui then previous:Destroy() end
+            gui.Parent = container
+        end
+    end) end
     panel = make("Frame", {Size = UDim2.new(0.92, 0, 0.86, 0),
         Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Color3.fromRGB(18, 24, 36), BackgroundTransparency = 0,
@@ -481,4 +490,6 @@ if not bootOK then
         game:GetService("StarterGui"):SetCore("SendNotification", {
             Title = "Lifting Hub startup error", Text = tostring(bootError):sub(1, 180), Duration = 20})
     end)
+    return false, tostring(bootError)
 end
+return true, "Lifting Hub initialized"
